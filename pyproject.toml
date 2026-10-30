@@ -1,0 +1,29 @@
+[project]
+name = "lane-perception"
+version = "0.1.0"
+description = "Classical vs learned lane detection for Indian and adverse driving conditions (DIP course project 049)"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "opencv-contrib-python==5.0.0.93",
+    "numpy",
+    "pandas",
+    "matplotlib",
+    "tqdm",
+    "scipy>=1.18.1",
+    "tabulate>=0.10.0",
+]
+
+[dependency-groups]
+dev = ["pytest"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["lanekit"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
