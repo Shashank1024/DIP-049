@@ -15,6 +15,15 @@ Three lane-detection methods run on the same frames and are scored the same way:
 Evaluation: CULane lane F1 / precision / recall per condition (normal, shadow, night, no-line,
 crowded), all-lanes and ego-lane-only scores, FPS, and a stage-by-stage ablation.
 
+**Results (250 frames/condition, CULane test split):** the improved method beats the baseline on
+normal (F1 0.26 vs 0.25) and crowded (0.14 vs 0.08) roads, loses on shadow/night/no-line where its
+paint-brightness assumption breaks down, and UFLD (pretrained, inference only) leads on every
+condition (0.36–0.88 F1). Full tables, charts, the pipeline diagram and the per-contributor
+write-ups are in [`docs/`](docs/): [architecture](docs/lane_detection_architecture.md),
+[Person A's contribution](docs/person_a_contribution.md) (improved detector, ablation, failure
+analysis), [Person B's contribution](docs/person_b_contribution.md) (data, baseline, evaluator,
+UFLD integration).
+
 ## Layout
 
 ```
