@@ -27,10 +27,11 @@ that shows *exactly where* classical image processing holds up, where it breaks,
 4. [Results](#results)
 5. [What each pipeline stage is worth (ablation)](#what-each-pipeline-stage-is-worth-ablation)
 6. [Failure analysis](#failure-analysis)
-7. [Limitations — read this before citing any number here](#limitations--read-this-before-citing-any-number-here)
-8. [Repository layout](#repository-layout)
-9. [Reproducing everything](#reproducing-everything)
-10. [Contributions](#contributions)
+7. [Qualitative study on Indian roads](#qualitative-study-on-indian-roads)
+8. [Limitations — read this before citing any number here](#limitations--read-this-before-citing-any-number-here)
+9. [Repository layout](#repository-layout)
+10. [Reproducing everything](#reproducing-everything)
+11. [Contributions](#contributions)
 
 ---
 
@@ -254,6 +255,70 @@ Full writeups with more detail: [docs/person_a_contribution.md](docs/person_a_co
 [docs/person_b_contribution.md](docs/person_b_contribution.md) (data, baseline, evaluator, UFLD
 integration).
 
+## Qualitative study on Indian roads
+
+To check how the three methods generalize beyond CULane (Beijing footage) without claiming
+unverified benchmark scores, we ran all three on four real Indian road scenes: single frames
+extracted (via `ffmpeg`) from publicly available dashcam-style driving footage, not recorded by
+the team, used here only for non-commercial, illustrative comparison. The source photos
+themselves are not committed to this repository (same reasoning as CULane — see
+[data/README.md](data/README.md)); only the derived comparison figures below are:
+
+1. **Multi-lane expressway** (Delhi–Meerut Expressway) — structured, well-marked, overhead gantries.
+2. **Dense mixed urban traffic** (Bengaluru) — tight following distances, auto-rickshaws, two-wheelers.
+3. **Urban arterial under a flyover** (Bengaluru) — a bus and heavy tree canopy largely hiding the road.
+4. **Suburban underpass with no visible lane paint** (Bengaluru) — autorickshaws, motorcycles, no markings at all.
+
+<table>
+<tr>
+<th width="50%">Multi-Lane Expressway (Structured)</th>
+<th width="50%">Urban Mixed Traffic (Dense Occlusion)</th>
+</tr>
+<tr>
+<td><img src="docs/assets/compare_india_expressway.jpg" width="100%" alt="Expressway: Input vs Baseline vs Improved vs Learned"></td>
+<td><img src="docs/assets/compare_india_traffic.jpg" width="100%" alt="Urban Traffic: Input vs Baseline vs Improved vs Learned"></td>
+</tr>
+<tr>
+<th width="50%">Urban City Arterial</th>
+<th width="50%">Suburban / Partial Markings</th>
+</tr>
+<tr>
+<td><img src="docs/assets/compare_india_urban.jpg" width="100%" alt="Bangalore Urban: Input vs Baseline vs Improved vs Learned"></td>
+<td><img src="docs/assets/compare_india_suburban.jpg" width="100%" alt="Suburban: Input vs Baseline vs Improved vs Learned"></td>
+</tr>
+</table>
+
+### Observations — domain shift is real, and it isn't gentle
+
+No scores are claimed here — four photos is not a benchmark — but the pattern across all four is
+consistent enough to state plainly, because it's the honest finding: **none of the three methods
+transfer cleanly to India, including the pretrained CNN that dominates every CULane condition.**
+
+| Scene | Baseline | Improved | UFLD |
+|---|---|---|---|
+| Expressway | 2 lanes, roughly tracks the dashed markings | 1 lane — a stray diagonal line locked onto the median guardrail's black/white stripes, not paint | 2 lanes, plausible near the car but short and uncertain further out |
+| Dense traffic | 2 lines crossing in an X through the lead car — clearly wrong | 2 diverging lines running into the trees, not the road | **0 lanes found** |
+| Urban/flyover | 2 lines crossing in an X through the bus | 2 diverging lines into the tree canopy on both sides | 2 lines, but running toward the bus, not the road |
+| Suburban/no paint | 2 lines crossing through a pillar and an autorickshaw | 2 lines through a pillar and parked motorcycles | **0 lanes found** |
+
+- **The classical methods' specific failure mode carries over from CULane, predictably:** the
+  improved pipeline's colour/top-hat masks and the baseline's Hough lines both latch onto whatever
+  sharp, high-contrast structure is nearest the expected lane position — median guardrail stripes,
+  tree trunks, parked vehicles — when there's no real paint there to find. This is the same root
+  cause documented in the [failure analysis](#failure-analysis) above, just in a new setting.
+- **UFLD's failure is the more interesting result.** It is the clear winner on every CULane
+  condition, including `no_line` (0.36 F1 where both classical methods score under 0.02) — yet it
+  finds **zero lanes at all** on two of these four Indian scenes. A model trained on one country's
+  road markings, signage density, vehicle mix and camera angle does not automatically generalize
+  to another's, even when it clearly outperforms hand-built rules within its training distribution.
+  That gap — strong in-distribution, fragile out-of-distribution — is a genuinely useful,
+  honest finding for a DIP/CV project to report, and a more defensible one than a claim that
+  everything "resists domain shift."
+- **This section exists precisely because the quantitative results above are Beijing-only.** It
+  does not close that gap — four unlabelled photos can't produce a benchmark number — but it does
+  show, concretely, what happens when every method here meets Indian roads, rather than leaving
+  the question unanswered.
+
 ## Limitations — read this before citing any number here
 
 Listed here deliberately, rather than left implicit, because they change how the results should
@@ -268,12 +333,11 @@ be read:
   original authors' trained model running on our data split, not a model this project trained or
   fine-tuned. The contribution on that side is export/integration engineering (PyTorch → ONNX →
   `cv2.dnn`), not modelling.
-- **No Indian road data is used or scored.** All quantitative results come from CULane, filmed in
-  Beijing. We deliberately chose not to collect our own footage, so there is no evaluated
-  real-world test of these methods on Indian roads — only on CULane's five hard-condition splits,
-  which cover similar *kinds* of difficulty (night, shadow, occlusion, missing paint) without
-  being drawn from India specifically. This project's scope is a CULane benchmark study, not an
-  India-specific one.
+- **Indian road evaluation is strictly qualitative, on four photos, with no ground truth.** All
+  quantitative F1/precision/recall numbers in this README come only from the 1,250-photo CULane
+  test split. The [Indian roads section](#qualitative-study-on-indian-roads) shows what the three
+  methods actually produce on real Indian footage — including UFLD finding zero lanes on two of
+  the four photos — but four unlabelled images cannot support a benchmark claim, and none is made.
 - **Temporal smoothing is implemented but not evaluated.** `lanekit/improved.py` includes a
   `LaneTracker` class (exponential-moving-average smoothing of the fitted curve across frames) for
   use on video. CULane's test split only provides photos sampled one second apart (every 30th
@@ -290,7 +354,7 @@ be read:
 ```
 lanekit/    core pipelines, evaluation, data loading — the actual project code
 scripts/    CLI tools: run_eval.py, make_figures.py, show_stages.py, calibrate_geometry.py,
-            export_ufld_onnx.py
+            export_ufld_onnx.py, evaluate_indian_roads.py
 docs/       per-contributor writeups, pipeline diagram, and the committed results/figures
             (docs/assets/) referenced throughout this README
 tests/      pytest — 11 tests covering the evaluator, both classical methods, and environment
@@ -312,6 +376,9 @@ uv run python scripts/show_stages.py <folder-of-photos> outputs/improved   # sta
 uv run python scripts/run_eval.py --per-condition 250                      # -> outputs/results.csv
 uv run python scripts/run_eval.py --per-condition 250 --ablation           # -> outputs/ablation.csv
 uv run python scripts/make_figures.py                                      # tables/charts/comparisons
+
+# Optional: the qualitative Indian-roads comparisons (needs data/india_samples/ — see data/README.md)
+uv run python scripts/evaluate_indian_roads.py
 ```
 
 The learned method needs a one-time ONNX export: download `culane_18.pth` from the
