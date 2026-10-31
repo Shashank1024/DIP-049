@@ -83,7 +83,7 @@ the road-area trapezoid → probabilistic Hough transform finds line segments �
 left/right by slope and combined into one straight line per side, weighted by segment length. No
 tuning beyond the textbook defaults. This is the "what happens if you don't try very hard" control.
 
-### 2. Improved — the hand-tuned classical pipeline (Person A)
+### 2. Improved — the hand-tuned classical pipeline (Aditya)
 
 `lanekit/improved.py`. Nine stages, every one saved to disk so it can be inspected directly:
 
@@ -112,7 +112,7 @@ tuning beyond the textbook defaults. This is the "what happens if you don't try 
 
 Full stage-by-stage images for every condition: [`docs/assets/stages_*.jpg`](docs/assets/).
 
-### 3. Learned — Ultra-Fast Lane Detection (Person B)
+### 3. Learned — Ultra-Fast Lane Detection (Shashank)
 
 `lanekit/learned.py`. [UFLD](https://github.com/cfzd/Ultra-Fast-Lane-Detection) (Qin et al.,
 ECCV 2020), **pretrained on CULane by its original authors, used for inference only — nothing in
@@ -250,9 +250,9 @@ warp region." That holds on clean, well-lit, unobstructed roads (where it beats 
 breaks in exactly the three documented ways whenever something else is brighter than the paint,
 the road geometry isn't a single straight stripe, or there's no paint at all.
 
-Full writeups with more detail: [docs/person_a_contribution.md](docs/person_a_contribution.md)
+Full writeups with more detail: [Aditya](docs/person_a_contribution.md)
 (improved pipeline, ablation, failure analysis) and
-[docs/person_b_contribution.md](docs/person_b_contribution.md) (data, baseline, evaluator, UFLD
+[Shashank](docs/person_b_contribution.md) (data, baseline, evaluator, UFLD
 integration).
 
 ## Qualitative study on Indian roads
@@ -397,8 +397,8 @@ repo to `models/ufld_repo`, then run `scripts/export_ufld_onnx.py`. Once
 
 Full log: [CONTRIBUTIONS.md](CONTRIBUTIONS.md).
 
-- **Person A** — the improved classical detector, its ablation study, and the failure analysis.
-- **Person B** — data pipeline, the CULane-protocol evaluator, the baseline detector, and the UFLD
+- **Aditya** — the improved classical detector, its ablation study, and the failure analysis.
+- **Shashank** — data pipeline, the CULane-protocol evaluator, the baseline detector, and the UFLD
   ONNX export / `cv2.dnn` integration.
 - All three-method evaluation results were independently re-run and verified to match exactly
   between both team members before being merged.
