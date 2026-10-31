@@ -1,0 +1,16 @@
+method,condition,frames,f1,precision,recall,ego_f1,fps
+baseline,normal,250,0.2494,0.3699,0.1881,0.2993,145.8
+improved,normal,250,0.2613,0.479,0.1796,0.356,50.3
+learned_ufld,normal,250,0.8809,0.882,0.8799,0.8546,12.5
+baseline,crowded,250,0.0795,0.1102,0.0621,0.0882,138.5
+improved,crowded,250,0.1356,0.2023,0.102,0.1791,50.1
+learned_ufld,crowded,250,0.7254,0.7324,0.7186,0.8141,11.1
+baseline,shadow,250,0.1257,0.1678,0.1005,0.1333,118.8
+improved,shadow,250,0.0546,0.073,0.0437,0.0708,47.1
+learned_ufld,shadow,250,0.6772,0.6745,0.6799,0.6674,11.1
+baseline,no_line,250,0.0759,0.1208,0.0554,0.0556,161.0
+improved,no_line,250,0.0193,0.0378,0.013,0.0152,52.4
+learned_ufld,no_line,250,0.3618,0.3817,0.3439,0.2839,11.0
+baseline,night,250,0.1627,0.2434,0.1222,0.1957,255.8
+improved,night,250,0.0617,0.083,0.0491,0.0756,34.0
+learned_ufld,night,250,0.6319,0.6543,0.6109,0.6644,11.0
