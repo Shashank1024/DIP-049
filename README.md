@@ -354,7 +354,8 @@ be read:
 ```
 lanekit/    core pipelines, evaluation, data loading — the actual project code
 scripts/    CLI tools: run_eval.py, make_figures.py, show_stages.py, calibrate_geometry.py,
-            export_ufld_onnx.py, evaluate_indian_roads.py
+            export_ufld_onnx.py, evaluate_indian_roads.py, label_india_ground_truth.py,
+            score_india_roads.py
 docs/       per-contributor writeups, pipeline diagram, and the committed results/figures
             (docs/assets/) referenced throughout this README
 tests/      pytest — 11 tests covering the evaluator, both classical methods, and environment
@@ -379,6 +380,12 @@ uv run python scripts/make_figures.py                                      # tab
 
 # Optional: the qualitative Indian-roads comparisons (needs data/india_samples/ — see data/README.md)
 uv run python scripts/evaluate_indian_roads.py
+
+# Optional: real (not fabricated) scores on the 4 Indian photos — needs a display.
+# Click points along each true lane; 'n' new lane, 's' save+next, 'q' skip. n=4 is
+# not a benchmark, but it's a genuine score instead of none.
+uv run python scripts/label_india_ground_truth.py
+uv run python scripts/score_india_roads.py
 ```
 
 The learned method needs a one-time ONNX export: download `culane_18.pth` from the
