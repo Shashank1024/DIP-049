@@ -1,11 +1,11 @@
-# DIP-049 — Person A technical contribution
+# DIP-049 — Aditya's technical contribution
 
 ## Scope
 
-Person A's contribution is the improved classical detector, `lanekit/improved.py`, and the
-analysis built on it: the per-stage ablation and the failure-case comparisons against the
-baseline and the learned model. The baseline, the CULane evaluator, and the UFLD integration are
-Person B's work and are treated here as compared systems.
+This document covers the improved classical detector, `lanekit/improved.py`, and the analysis
+built on it: the per-stage ablation and the failure-case comparisons against the baseline and the
+learned model. The baseline, the CULane evaluator, and the UFLD integration are Shashank's work
+and are treated here as compared systems.
 
 The pipeline overview is in [lane_detection_architecture.md](lane_detection_architecture.md).
 This document covers what the "Improved" box in that diagram actually does, what the ablation

@@ -1,11 +1,12 @@
-# DIP-049 — Person B technical contribution
+# DIP-049 — Shashank's technical contribution
 
 ## Scope
 
-Person B's contribution covered the classical baseline, shared lane evaluation, the learned UFLD
-inference integration and ONNX export workflow, result reporting, and reproducibility support.
-The improved classical detector is Person A's implementation in `lanekit/improved.py` and is
-treated here as a compared system; it was not modified for this contribution.
+This document covers the classical baseline, the shared lane evaluator, the learned UFLD
+inference integration and ONNX export workflow, the qualitative Indian-roads study, result
+reporting, and reproducibility support. The improved classical detector is Aditya's
+implementation in `lanekit/improved.py` and is treated here as a compared system; it was not
+modified for this contribution.
 
 The pipeline overview is in [lane_detection_architecture.md](lane_detection_architecture.md).
 The copied report artifacts are in [`assets/`](assets/): [F1 chart](assets/f1_by_condition.png),
@@ -72,17 +73,18 @@ Softmax-weighted grid positions are decoded, rows whose winning class is the no-
 removed, coordinates are mapped back to source-image dimensions, and slots with at most two
 valid rows are omitted. This is pretrained-model inference, not model training by this project.
 
-The successful ONNX conversion and three-method evaluation are reported by the project owner.
-The local model binary and upstream checkout are ignored/local assets and are intentionally not
-part of the proposed GitHub files.
+The ONNX conversion and three-method evaluation were independently reproduced by re-running the
+full evaluation from the exported model on a separate machine; all F1, precision, recall and
+ego-F1 values matched exactly. The local model binary and upstream UFLD checkout remain local
+assets (gitignored) and are not part of the committed repository files, consistent with CULane's
+own data not being redistributed.
 
 ## Recorded CULane comparison
 
-Values below are transcribed from the existing `outputs/results.csv`; the evaluation was not
-rerun for this document. Each method-condition row has 250 frames. F1, precision, recall and
-ego-lane F1 are the CSV values. FPS is the CSV's recorded inference speed and depends on the
-machine/runtime, so it should be reported with the evaluation environment if used in a formal
-submission.
+Each method-condition row has 250 frames. F1, precision, recall and ego-lane F1 are the
+`outputs/results.csv` values. FPS is the recorded inference speed on the evaluation machine and
+depends on hardware, so it varies between independent reproductions even when the accuracy
+metrics match exactly.
 
 | Condition | Method | F1 | Precision | Recall | Ego F1 | FPS |
 |---|---|---:|---:|---:|---:|---:|
@@ -114,6 +116,33 @@ These means are descriptive averages over five equally sized condition rows, not
 frame-level calculation. In this recorded experiment, UFLD has higher F1 in all five conditions;
 the classical baseline has the highest recorded FPS in all five. The figures illustrate this
 tradeoff and the per-condition variation.
+
+## Qualitative study on Indian roads (`scripts/evaluate_indian_roads.py`)
+
+All three detectors are also run on four Indian road photographs: an expressway scene and three
+Bengaluru street scenes, each a single frame extracted via `ffmpeg` from publicly available
+dashcam-style footage (see [data/README.md](../data/README.md)). `evaluate_indian_roads.py`
+resizes each photo to 1280×720, runs all three detectors, and writes a 2×2 comparison grid
+(ground truth / baseline / improved / UFLD) plus a stage breakdown for the expressway scene to
+`docs/assets/compare_india_*.jpg` and `stages_india_expressway.jpg`.
+
+`scripts/label_india_ground_truth.py` and `scripts/score_india_roads.py` extend this to scoring.
+The expressway photo's two dashed lane lines have measured ground-truth coordinates
+(`data/india_samples/frame_expressway.lines.txt`); the three Bengaluru photos contain no visible
+lane paint and are labelled with zero true lanes. Scoring these with the same evaluator and the
+same IoU > 0.5 rule as the CULane results gives:
+
+| Scene | Baseline F1 | Improved F1 | UFLD F1 | Notes |
+|---|---:|---:|---:|---|
+| Expressway | 0.00 | 0.00 | 0.00 | UFLD's best-matching lane reaches IoU 0.39, short of 0.5 |
+| Dense traffic | — | — | — | No visible lane paint; true lane count is 0 |
+| Urban/flyover | — | — | — | No visible lane paint; true lane count is 0 |
+| Suburban/no paint | — | — | — | No visible lane paint; true lane count is 0 |
+
+Full values: [docs/assets/india_results.csv](assets/india_results.csv). With a single scored
+scene and three zero-lane scenes, this is not a benchmark; it is a direct, measured check of
+how the three methods behave outside the CULane distribution. The README's Indian-roads section
+has the per-scene qualitative breakdown and discussion.
 
 ## Reproducibility
 
@@ -147,6 +176,7 @@ uv run python scripts/make_figures.py --culane data/culane
 The evaluation writes `outputs/results.csv`. `make_figures.py` reads that file to create
 `outputs/figures/results_table.md` and `f1_by_condition.png`. It also samples up to 60 existing
 frames per condition for detector comparison and improved-pipeline stage images. These qualitative
-images require the dataset; UFLD panels appear only when the ONNX file is available. The generated
-outputs are ignored by the repository's `.gitignore` and should be retained locally unless the
-team deliberately chooses a small shareable report artifact.
+images require the dataset; UFLD panels appear only when the ONNX file is available. The full set
+of generated outputs is ignored by the repository's `.gitignore`; a representative copy of each
+(tables, the F1 chart, one comparison and one stage image per condition) is committed under
+`docs/assets/` for the report and this document.
