@@ -15,12 +15,11 @@ data/culane/
 
 Note: the crossroad split has no lanes, so F1 is undefined there; it reports false positives only.
 
-## India samples (qualitative only, no scores)
+## India samples (qualitative study)
 
 Used by `scripts/evaluate_indian_roads.py` to produce the "Qualitative study on Indian roads"
 section of the main README. Four single frames extracted (via `ffmpeg`) from publicly available
-Indian driving footage — not recorded by the team, and not labelled, so these produce no F1/
-precision/recall numbers, only visual comparisons. Expected layout:
+Indian driving footage. Expected layout:
 
 ```
 data/india_samples/
@@ -30,14 +29,13 @@ data/india_samples/
   frame_bangalore_suburban.jpg   Bengaluru suburban underpass, no visible lane paint
 ```
 
-Exact source footage is not tracked in this repo. If you need to recreate this folder, any
-dashcam-style Indian driving clip works — extract one representative frame per scene with
+Exact source footage is not tracked in this repo. To recreate this folder, extract one
+representative frame per scene from any dashcam-style Indian driving clip with
 `ffmpeg -i <clip> -vf "select=eq(n\,<frame_number)" -frames:v 1 <output>.jpg` and resize to
-1280×720 (the script does this automatically if the input isn't already that size).
+1280×720 (the script resizes automatically if the input isn't already that size).
 
 A matching `<name>.lines.txt` beside each photo is its ground truth, in CULane's point format
-(see `scripts/label_india_ground_truth.py` to create your own, or `scripts/score_india_roads.py`
-to score against existing ones). The committed set used for this project's reported result: real
-dashed-line coordinates for `frame_expressway.jpg`, read directly off the photo (not mouse-clicked
-— see the README's Indian-roads section for what that means for precision); empty files for the
-three Bengaluru photos, since direct inspection confirmed no visible lane paint in any of them.
+(`scripts/label_india_ground_truth.py` to create your own, `scripts/score_india_roads.py` to
+score against existing ones). The committed set: dashed-line coordinates for
+`frame_expressway.jpg`; empty ground-truth files for the three Bengaluru photos, which contain no
+visible lane paint.

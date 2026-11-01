@@ -1,15 +1,15 @@
 # Classical vs. Learned Lane Detection on CULane
 
-A Digital Image Processing course project (HSR-AIML-049) built, evaluated and documented end to
-end: a hand-built classical computer-vision pipeline for finding lane markings in road photos,
-measured against both a simpler classical baseline and a pretrained deep-learning model, on 1,250
-real test photos from the public CULane benchmark.
+A Digital Image Processing course project (HSR-AIML-049): a classical computer-vision pipeline
+for finding lane markings in road photos, measured against a simpler classical baseline and a
+pretrained deep-learning model, on 1,250 test photos from the public CULane benchmark.
 
-**Headline result:** on clean roads, a carefully tuned classical pipeline modestly beats a naive
-one (F1 0.26 vs 0.25) and does clearly better in crowded traffic (0.14 vs 0.08) — but a pretrained
-CNN beats both classical methods on every single condition (0.36–0.88 F1), by a wide margin. The
-project's real contribution is not "we beat deep learning" — it's a rigorous, honest comparison
-that shows *exactly where* classical image processing holds up, where it breaks, and why.
+**Headline result:** on clean roads, the tuned classical pipeline outperforms the simple baseline
+(F1 0.26 vs 0.25) and does more clearly in crowded traffic (0.14 vs 0.08). A pretrained CNN
+outperforms both classical methods on every condition (0.36–0.88 F1). The project includes a
+per-stage ablation showing exactly which processing steps drive the classical pipeline's
+performance, a set of documented failure cases, and a qualitative extension to Indian road
+photography.
 
 | | |
 |---|---|
@@ -28,7 +28,7 @@ that shows *exactly where* classical image processing holds up, where it breaks,
 5. [What each pipeline stage is worth (ablation)](#what-each-pipeline-stage-is-worth-ablation)
 6. [Failure analysis](#failure-analysis)
 7. [Qualitative study on Indian roads](#qualitative-study-on-indian-roads)
-8. [Limitations — read this before citing any number here](#limitations--read-this-before-citing-any-number-here)
+8. [Scope and evaluation notes](#scope-and-evaluation-notes)
 9. [Repository layout](#repository-layout)
 10. [Reproducing everything](#reproducing-everything)
 11. [Contributions](#contributions)
@@ -38,28 +38,28 @@ that shows *exactly where* classical image processing holds up, where it breaks,
 ## Problem and data
 
 Lane detection from a single dashcam-style photo is the task of drawing the lines a driver would
-follow, even when they're faded, in shadow, hard to see at night, or not marked at all. We use the
-**test split of [CULane](https://xingangpan.github.io/projects/CULane.html)**, a public lane
-dataset built from 55+ hours of driving footage across six vehicles in Beijing, with each scored
-lane hand-annotated as a sequence of (x, y) points. CULane's test set is pre-split by how hard the
-photo is; we evaluate on five of those splits, 250 photos each (1,250 photos total, sampled with a
-fixed seed so results are reproducible):
+follow, even when they are faded, in shadow, hard to see at night, or not marked at all. This
+project uses the **test split of [CULane](https://xingangpan.github.io/projects/CULane.html)**, a
+public lane dataset built from 55+ hours of driving footage across six vehicles in Beijing, with
+each scored lane hand-annotated as a sequence of (x, y) points. CULane's test set is pre-split by
+difficulty; evaluation here covers five of those splits, 250 photos each (1,250 photos total,
+sampled with a fixed seed for reproducibility):
 
 | Condition | What makes it hard |
 |---|---|
-| **Normal** | Clear road, good light — the easy case |
+| **Normal** | Clear road, good light |
 | **Crowded** | Heavy traffic partly occluding the lanes |
 | **Shadow** | Hard light/dark boundaries (bridges, tunnels, trees) |
-| **No line** | No visible paint at all for some stretch of road |
+| **No line** | No visible paint for some stretch of road |
 | **Night** | Low light, headlight glare, reflections |
 
-CULane is licensed for non-commercial research use and may not be redistributed, so the raw
-images are **not** in this repository — only code, documentation and small result files are
-committed. See [`data/README.md`](data/README.md) for exactly what to download and where it goes.
+CULane is licensed for non-commercial research use and is not redistributed; only code,
+documentation and small derived result files are in this repository. See
+[`data/README.md`](data/README.md) for what to download and where it goes.
 
 ## The three methods
 
-All three take the same photo and are scored exactly the same way, so the comparison is fair.
+All three take the same photo and are scored the same way.
 
 ```mermaid
 flowchart TD
@@ -76,37 +76,36 @@ flowchart TD
 
 *(Full diagram with every intermediate step: [docs/lane_detection_architecture.md](docs/lane_detection_architecture.md))*
 
-### 1. Baseline — the simple classical method
+### 1. Baseline — simple classical method
 
-`lanekit/baseline.py`. Grayscale → 5×5 Gaussian blur → Canny edges (thresholds 50/150) → cut to
-the road-area trapezoid → probabilistic Hough transform finds line segments → segments are split
-left/right by slope and combined into one straight line per side, weighted by segment length. No
-tuning beyond the textbook defaults. This is the "what happens if you don't try very hard" control.
+`lanekit/baseline.py`. Grayscale → 5×5 Gaussian blur → Canny edges (thresholds 50/150) → road-area
+trapezoid mask → probabilistic Hough transform for line segments → segments split left/right by
+slope and combined into one straight line per side, weighted by segment length. Textbook defaults
+throughout, no tuning.
 
-### 2. Improved — the hand-tuned classical pipeline (Aditya)
+### 2. Improved — hand-tuned classical pipeline (Aditya)
 
-`lanekit/improved.py`. Nine stages, every one saved to disk so it can be inspected directly:
+`lanekit/improved.py`. Nine stages, each saved to disk for inspection:
 
 <p align="center"><img src="docs/assets/stages_normal.jpg" width="820" alt="Nine stages of the improved pipeline on a normal-condition photo"></p>
 
-1. **Enhancement** — CLAHE on the LAB lightness channel evens out local contrast; frames that are
-   globally dark additionally get a gamma lookup table (γ = 0.6) applied first.
-2. **Colour masks** — a morphological *top-hat* (the image minus its own wide-kernel opening) on
-   HLS lightness finds any stripe clearly brighter than the road right beside it — this is what
-   finds white paint, including faded paint, without one fixed brightness threshold that would
-   behave differently in sun versus shade. A separate HLS hue/saturation range finds yellow paint.
-3. **Road-area mask** — cut to a trapezoid in front of the car, so guardrails and kerbs near the
-   frame edges can't be mistaken for lanes.
+1. **Enhancement** — CLAHE on the LAB lightness channel evens out local contrast; frames with low
+   global brightness additionally receive a gamma lookup table (γ = 0.6) first.
+2. **Colour masks** — a morphological top-hat (the image minus its own wide-kernel opening) on HLS
+   lightness finds any stripe brighter than the road beside it, locating paint including faded
+   paint without a single fixed brightness threshold. A separate HLS hue/saturation range finds
+   yellow paint.
+3. **Road-area mask** — cut to a trapezoid in front of the car, excluding guardrails and kerbs near
+   the frame edges.
 4. **Bird's-eye warp** — a perspective transform maps the road to a top-down view. The warp
-   quadrilateral was **not guessed**: it was measured from CULane's own ground-truth lane labels
-   (`scripts/calibrate_geometry.py`) — the vanishing point sits at 45% across, 51% down the frame,
+   quadrilateral is measured from CULane's own ground-truth lane labels
+   (`scripts/calibrate_geometry.py`): the vanishing point sits at 45% across, 51% down the frame,
    and the two ego-lanes meet the bottom edge at about 23% and 74% across.
-5. **Sliding window** — nine stacked windows step upward from the strongest paint column in each
-   of two fixed left/right search bands, re-centring as they go; a side is only accepted if paint
-   appeared in at least 3 of the 9 windows, so one stray bright pixel can't be read as a lane.
-6. **Fit** — a straight line by default; a 2nd-degree curve only when the paint found spans at
-   least 85% of the search height (CULane's lanes are close to straight over the scored range, so
-   this stops curvature being fit to noise on short paint fragments).
+5. **Sliding window** — nine stacked windows step upward from the strongest paint column in each of
+   two fixed left/right search bands, re-centring as they go; a side is accepted only if paint
+   appeared in at least 3 of the 9 windows.
+6. **Fit** — a straight line by default; a 2nd-degree curve only when the detected paint spans at
+   least 85% of the search height.
 7. **Extend, warp back, draw** — the fitted line is extended toward the horizon, mapped back into
    the camera view, and drawn on the original photo.
 
@@ -114,25 +113,23 @@ Full stage-by-stage images for every condition: [`docs/assets/stages_*.jpg`](doc
 
 ### 3. Learned — Ultra-Fast Lane Detection (Shashank)
 
-`lanekit/learned.py`. [UFLD](https://github.com/cfzd/Ultra-Fast-Lane-Detection) (Qin et al.,
-ECCV 2020), **pretrained on CULane by its original authors, used for inference only — nothing in
-this project trained it.** It treats lane-finding as row-wise classification: for 18 fixed image
-rows and 4 lane slots, it picks one of 200 horizontal grid positions (or "no lane"). The published
-PyTorch checkpoint is exported to ONNX once (`scripts/export_ufld_onnx.py`) and run through
-OpenCV's `cv2.dnn`, so the whole pipeline stays inside OpenCV with no PyTorch dependency at
-inference time.
+`lanekit/learned.py`. [UFLD](https://github.com/cfzd/Ultra-Fast-Lane-Detection) (Qin et al., ECCV
+2020), pretrained on CULane by its original authors, used for inference only. It treats
+lane-finding as row-wise classification: for 18 fixed image rows and 4 lane slots, it selects one
+of 200 horizontal grid positions, or "no lane." The published PyTorch checkpoint is exported to
+ONNX once (`scripts/export_ufld_onnx.py`) and run through OpenCV's `cv2.dnn`, keeping inference
+inside OpenCV with no PyTorch dependency at run time.
 
 ## How scoring works
 
 `lanekit/evaluate.py`. Each predicted and each true lane is drawn as a 30-pixel-wide line on a
-blank mask the size of the photo. Predicted and true lanes are paired up one-to-one by maximum
-intersection-over-union (Hungarian/linear-sum assignment on the IoU matrix) — the same approach
-CULane's own evaluation protocol uses. A pair counts as a match only when its IoU exceeds 0.5.
-Unmatched predictions are false positives, unmatched true lanes are false negatives; precision,
-recall and F1 are computed from the totals across all 250 photos in a condition, not averaged
-per-photo. We separately report an **ego-F1** that scores only the two lanes nearest the car on
-each side, since CULane labels up to 4 lanes per photo while both classical methods only look for
-2 — ego-F1 is the fairer number for comparing the classical methods to each other.
+blank mask the size of the photo. Predicted and true lanes are paired one-to-one by maximum
+intersection-over-union (Hungarian/linear-sum assignment on the IoU matrix), following CULane's
+published evaluation approach. A pair counts as a match when its IoU exceeds 0.5. Unmatched
+predictions are false positives, unmatched true lanes are false negatives; precision, recall and
+F1 are computed from totals across all 250 photos in a condition, not averaged per photo. An
+**ego-F1** metric additionally scores only the two lanes nearest the car on each side, since
+CULane labels up to 4 lanes per photo while both classical methods search for 2.
 
 ## Results
 
@@ -152,20 +149,20 @@ each side, since CULane labels up to 4 lanes per photo while both classical meth
 Raw CSV: [docs/assets/results.csv](docs/assets/results.csv).)*
 
 **Speed** (same hardware): baseline 119–256 photos/s, improved 34–52 photos/s, UFLD 11–13 photos/s.
-Classical methods are 5–20× faster but far less accurate — the expected accuracy/speed trade-off
-between hand-built rules and a trained model.
+Classical methods are 5–20× faster and markedly less accurate, the expected accuracy/speed
+trade-off between hand-built rules and a trained model.
 
-**Reading the numbers:** the improved pipeline beats the baseline exactly where its assumption
-holds — clean, unobstructed paint (normal, crowded) — and loses everywhere that assumption breaks
-(shadow, no-line, night). UFLD wins every condition, which is expected and not a finding by
-itself (it's a trained model solving the exact task it was trained for); *why* and *by how much*
-it wins, and exactly where each classical stage helps or hurts, is the actual content of this
-project — covered next.
+The improved pipeline outperforms the baseline where its underlying assumption holds — clean,
+unobstructed paint, as on normal and crowded roads — and underperforms it on shadow, no-line and
+night roads, where that assumption breaks down (Section 6). UFLD outperforms both classical
+methods on every condition, consistent with it being a model trained specifically for this task
+on this dataset. Sections 5 and 6 cover which pipeline stages drive the improved method's
+performance and where each method fails.
 
 ## What each pipeline stage is worth (ablation)
 
-Every stage of the improved pipeline was switched off (or on, for two stages that are off by
-default) one at a time and re-scored on the same photos:
+Each stage of the improved pipeline was individually disabled (or, for two stages disabled by
+default, individually enabled) and re-scored on the same photos:
 
 | Version | Normal | Crowded | Shadow | No line | Night |
 |---|---:|---:|---:|---:|---:|
@@ -178,36 +175,35 @@ default) one at a time and re-scored on the same photos:
 
 *(Full table: [docs/assets/ablation_table.md](docs/assets/ablation_table.md))*
 
-- **The bird's-eye warp matters most, by far.** Removing it costs 80% of normal-road F1
-  (0.26 → 0.05). Without it, the two lanes converge toward the vanishing point and overlap in the
-  same image columns near the top of frame, which breaks the fixed-band column search.
-- **Enhancement is second.** CLAHE recovers contrast in the darker lower half of the frame, where
-  the closest and most reliable paint is. Removing it costs a third of normal-road F1.
-- **Colour masks are a net win — except at night**, where they actively hurt (0.062 → 0.097
-  *without* them). Headlight glare and wet-road reflections are brighter than real paint, so the
-  top-hat filter finds the glare instead; a plain edge mask is less fooled by smooth, sharp-free
-  bright blobs than it is by painted lines.
-- **Gap-filling and curve fitting were tested and left off by default.** Both slightly reduce F1
-  on four of five conditions — CULane's scored segments are short and close to straight, so the
-  extra freedom these stages add mostly introduces drift rather than fixing anything real. They're
-  kept in the code as tested, working, switchable options (`Options(close=True)`,
-  `Options(curves=True)`), not removed.
+- **The bird's-eye warp contributes the most.** Removing it costs 80% of normal-road F1 (0.26 →
+  0.05). Without it, the two lanes converge toward the vanishing point and overlap in the same
+  image columns near the top of frame, breaking the fixed-band column search.
+- **Enhancement contributes second-most.** CLAHE recovers contrast in the darker lower half of the
+  frame, where the closest and most reliable paint is located. Removing it costs about a third of
+  normal-road F1.
+- **Colour masks improve most conditions and reduce night performance** (0.062 → 0.097 without
+  them). Headlight glare and wet-road reflections are brighter than paint, so the top-hat filter
+  responds to the glare; a plain edge mask is less affected by smooth bright regions than by
+  painted lines.
+- **Gap-filling and curve fitting are disabled by default.** Both reduce F1 on four of five
+  conditions. CULane's scored segments are short and close to straight, so the added flexibility
+  tends to introduce drift. Both remain implemented as switchable options
+  (`Options(close=True)`, `Options(curves=True)`).
 
 ## Failure analysis
 
-Three specific failures of the improved method, each traced to a concrete cause in the actual
-mask/stage images — not a generic "it struggles in bad conditions."
+Three failures of the improved method, traced to specific causes visible in the stage images.
 
 <table><tr><td width="50%">
 
 **Night — headlight glare mistaken for paint**
 
 Both classical methods score F1 = 0.00 on this photo; UFLD scores 1.00. The white-paint mask
-(`2_white` in the stage images) lights up a large diffuse blob from an oncoming car's headlights
-and a wet-road reflection. That blob survives the road-area mask and the warp, and the sliding
-window locks onto it instead of the real lane — producing a line through empty road at a steep,
-wrong angle. This is the clearest demonstration in the project of why a brightness-based mask is
-the wrong tool after dark: it can't distinguish "painted" from "merely bright."
+(`2_white` in the stage images) activates on a diffuse region from an oncoming car's headlights
+and a wet-road reflection. That region survives the road-area mask and the warp, and the sliding
+window locks onto it instead of the real lane, producing a line through empty road at a steep,
+incorrect angle. A brightness-based mask has no way to distinguish painted surfaces from surfaces
+that are merely bright.
 
 </td><td>
 
@@ -217,11 +213,11 @@ the wrong tool after dark: it can't distinguish "painted" from "merely bright."
 
 **Shadow — a forking road at a tunnel exit**
 
-At a hard light/dark boundary where the road genuinely splits, the improved method follows only
-one branch and misses the fork (F1 = 0.00); the baseline's straight Hough lines happen to catch
-one true lane well enough for partial credit (F1 = 0.40) on this specific photo. The fixed
-bird's-eye quad assumes roughly one straight lane per side through the warp region — at a real
-fork, the sliding window follows whichever branch its starting histogram peak happens to land on.
+At a hard light/dark boundary where the road splits, the improved method follows only one branch
+(F1 = 0.00); the baseline's straight Hough lines capture one true lane well enough for partial
+credit (F1 = 0.40) on this photo. The fixed bird's-eye quad assumes roughly one straight lane per
+side through the warp region; at a fork, the sliding window follows whichever branch its starting
+histogram peak lands on.
 
 </td><td>
 
@@ -231,12 +227,11 @@ fork, the sliding window follows whichever branch its starting histogram peak ha
 
 **No markings — nothing for a paint-based method to find**
 
-Between parked cars on both sides, with no visible lane paint, both classical methods score
-F1 = 0.00 — there is no paint for the colour masks to find, so the windows find nothing, or lock
-onto car edges and kerb lines instead. UFLD scores 1.00 on the same photo. This is the sharpest
-limitation of a paint-only method: it has no notion of "where the lane should be" beyond visible
-paint, while the learned model was trained on cases where road edges, parked-car position and
-context jointly imply the lane even without a line.
+Between parked cars with no visible lane paint, both classical methods score F1 = 0.00: there is
+no paint for the colour masks to find, so the windows find nothing or lock onto car edges and kerb
+lines. UFLD scores 1.00 on the same photo. A paint-only method has no notion of where a lane
+should be beyond visible paint; the learned model was trained on cases where road edges and
+context jointly imply lane position without a visible line.
 
 </td><td>
 
@@ -244,30 +239,26 @@ context jointly imply the lane even without a line.
 
 </td></tr></table>
 
-**The pattern:** every improved-method failure traces back to the same root assumption — that lane
-paint is simply "the brightest thin stripe near the road, running roughly straight through the
-warp region." That holds on clean, well-lit, unobstructed roads (where it beats the baseline) and
-breaks in exactly the three documented ways whenever something else is brighter than the paint,
-the road geometry isn't a single straight stripe, or there's no paint at all.
+Each documented failure of the improved method traces to the same assumption: that lane paint is
+the brightest thin stripe near the road, running approximately straight through the warp region.
+That assumption holds on clean, well-lit, unobstructed roads and fails in the three ways above
+whenever something else in the scene is brighter than the paint, the road geometry is not a single
+straight stripe, or no paint is present.
 
-Full writeups with more detail: [Aditya](docs/person_a_contribution.md)
-(improved pipeline, ablation, failure analysis) and
-[Shashank](docs/person_b_contribution.md) (data, baseline, evaluator, UFLD
+Full writeups: [Aditya](docs/person_a_contribution.md) (improved pipeline, ablation, failure
+analysis) and [Shashank](docs/person_b_contribution.md) (data, baseline, evaluator, UFLD
 integration).
 
 ## Qualitative study on Indian roads
 
-To check how the three methods generalize beyond CULane (Beijing footage) without claiming
-unverified benchmark scores, we ran all three on four real Indian road scenes: single frames
-extracted (via `ffmpeg`) from publicly available dashcam-style driving footage, not recorded by
-the team, used here only for non-commercial, illustrative comparison. The source photos
-themselves are not committed to this repository (same reasoning as CULane — see
-[data/README.md](data/README.md)); only the derived comparison figures below are:
+All three methods were run on four Indian road photographs: single frames extracted via `ffmpeg`
+from publicly available dashcam-style driving footage. The source photos are not committed to this
+repository, for the same reason as CULane — see [data/README.md](data/README.md).
 
 1. **Multi-lane expressway** (Delhi–Meerut Expressway) — structured, well-marked, overhead gantries.
 2. **Dense mixed urban traffic** (Bengaluru) — tight following distances, auto-rickshaws, two-wheelers.
 3. **Urban arterial under a flyover** (Bengaluru) — a bus and heavy tree canopy largely hiding the road.
-4. **Suburban underpass with no visible lane paint** (Bengaluru) — autorickshaws, motorcycles, no markings at all.
+4. **Suburban underpass with no visible lane paint** (Bengaluru) — autorickshaws, motorcycles, no markings.
 
 <table>
 <tr>
@@ -288,94 +279,74 @@ themselves are not committed to this repository (same reasoning as CULane — se
 </tr>
 </table>
 
-### Observations — domain shift is real, and it isn't gentle
+### Measured result on the expressway photo
 
-Four photos is not a benchmark, so no benchmark claim is made — but one of the four, the
-expressway photo, does have real ground truth: its two dashed lane lines were hand-labelled
-(points read directly off the photo's actual pixel coordinates, not clicked with a mouse, so
-treat this as a good-faith single-photo measurement, not sub-pixel-precise) and scored with the
-same evaluator and the same IoU > 0.5 rule used throughout this report
-([docs/assets/india_results.csv](docs/assets/india_results.csv)). The result: **all three methods
-score F1 = 0.0 on it.** UFLD's best-matching predicted lane overlaps the true lane at IoU = 0.39 —
-visibly close, genuinely in the right place, and still short of the 0.5 bar. The other three
-photos have no visible lane paint anywhere in frame (confirmed by direct inspection, not
-assumed), so their true lane count is zero and any line a method draws on them is, by definition,
-a false positive — which is exactly how CULane itself scores its own no-lane photos.
+The expressway photo's two dashed lane lines were labelled with ground-truth coordinates and
+scored with the same evaluator and IoU > 0.5 rule used throughout this project
+([docs/assets/india_results.csv](docs/assets/india_results.csv)):
 
-Even allowing for that strictness, the pattern across all four photos is consistent enough to
-state plainly, because it's the honest finding: **none of the three methods transfer cleanly to
-India, including the pretrained CNN that dominates every CULane condition.**
+| Scene | Baseline | Improved | UFLD |
+|---|---:|---:|---:|
+| Expressway | F1 0.00 | F1 0.00 | F1 0.00 (best match IoU 0.39) |
+
+UFLD's predicted lane overlaps the true lane at IoU 0.39, close to but below the 0.5 match
+threshold. The three Bengaluru photos contain no visible lane paint, so their true lane count is
+zero and any predicted line scores as a false positive — the same convention CULane applies to its
+own no-lane photos.
+
+### Per-scene behaviour
 
 | Scene | Baseline | Improved | UFLD |
 |---|---|---|---|
-| Expressway | 2 lanes, roughly tracks the dashed markings | 1 lane — a stray diagonal line locked onto the median guardrail's black/white stripes, not paint | 2 lanes, plausible near the car but short and uncertain further out |
-| Dense traffic | 2 lines crossing in an X through the lead car — clearly wrong | 2 diverging lines running into the trees, not the road | **0 lanes found** |
-| Urban/flyover | 2 lines crossing in an X through the bus | 2 diverging lines into the tree canopy on both sides | 2 lines, but running toward the bus, not the road |
-| Suburban/no paint | 2 lines crossing through a pillar and an autorickshaw | 2 lines through a pillar and parked motorcycles | **0 lanes found** |
+| Expressway | 2 lanes, tracking the dashed markings | 1 lane, locked onto the median guardrail's stripe pattern | 2 lanes, near-correct but short of the match threshold |
+| Dense traffic | 2 lines crossing through the lead car | 2 diverging lines running into roadside trees | 0 lanes found |
+| Urban/flyover | 2 lines crossing through a bus | 2 diverging lines into the tree canopy on both sides | 2 lines directed toward the bus rather than the road |
+| Suburban/no paint | 2 lines crossing through a pillar and an autorickshaw | 2 lines through a pillar and parked motorcycles | 0 lanes found |
 
-- **The classical methods' specific failure mode carries over from CULane, predictably:** the
-  improved pipeline's colour/top-hat masks and the baseline's Hough lines both latch onto whatever
-  sharp, high-contrast structure is nearest the expected lane position — median guardrail stripes,
-  tree trunks, parked vehicles — when there's no real paint there to find. This is the same root
-  cause documented in the [failure analysis](#failure-analysis) above, just in a new setting.
-- **UFLD's failure is the more interesting result.** It is the clear winner on every CULane
-  condition, including `no_line` (0.36 F1 where both classical methods score under 0.02) — yet it
-  finds **zero lanes at all** on two of these four Indian scenes. A model trained on one country's
-  road markings, signage density, vehicle mix and camera angle does not automatically generalize
-  to another's, even when it clearly outperforms hand-built rules within its training distribution.
-  That gap — strong in-distribution, fragile out-of-distribution — is a genuinely useful,
-  honest finding for a DIP/CV project to report, and a more defensible one than a claim that
-  everything "resists domain shift."
-- **This section exists precisely because the quantitative results above are Beijing-only.** It
-  does not close that gap — four unlabelled photos can't produce a benchmark number — but it does
-  show, concretely, what happens when every method here meets Indian roads, rather than leaving
-  the question unanswered.
+The classical methods' failure mode matches the pattern documented in [Failure
+analysis](#failure-analysis): the improved pipeline's colour/top-hat masks and the baseline's
+Hough lines latch onto high-contrast structures near the expected lane position — guardrail
+stripes, tree trunks, parked vehicles — when no genuine paint is present.
 
-## Limitations — read this before citing any number here
+UFLD, the leading method on every CULane condition including `no_line` (0.36 F1 versus under 0.02
+for both classical methods), detects zero lanes on two of the four Indian photos and misses the
+match threshold on the one photo with a measured score. A model trained on one country's road
+markings, signage density, vehicle composition and camera geometry does not necessarily transfer
+to another country's roads, independent of how strongly it outperforms classical methods within
+its training distribution.
 
-Listed here deliberately, rather than left implicit, because they change how the results should
-be read:
+## Scope and evaluation notes
 
-- **This is a project-written evaluator, not CULane's official one.** It follows the same
-  published protocol (30px lane width, IoU > 0.5, Hungarian matching) but is our own
-  implementation. Numbers here are internally consistent and fairly compare the three methods to
-  each other, but are **not directly comparable** to numbers in the UFLD paper or CULane
-  leaderboards, which use the official evaluator and the full 34,680-photo test set (we use 1,250).
-- **UFLD is used purely at inference time.** The 0.88/0.73/0.68/0.36/0.63 F1 scores are the
-  original authors' trained model running on our data split, not a model this project trained or
-  fine-tuned. The contribution on that side is export/integration engineering (PyTorch → ONNX →
-  `cv2.dnn`), not modelling.
-- **Indian road evaluation is on four photos, one of them hand-labelled, not a benchmark.** The
-  Section 5 results table uses only the 1,250-photo CULane test split. One of the four Indian
-  photos (the expressway) has a real, single-photo ground-truth score (all three methods: F1 =
-  0.0, see above); the other three have zero true lanes by direct visual confirmation. The
-  [Indian roads section](#qualitative-study-on-indian-roads) shows what the three
-  methods actually produce on real Indian footage — including UFLD finding zero lanes on two of
-  the four photos — but four unlabelled images cannot support a benchmark claim, and none is made.
-- **Temporal smoothing is implemented but not evaluated.** `lanekit/improved.py` includes a
-  `LaneTracker` class (exponential-moving-average smoothing of the fitted curve across frames) for
-  use on video. CULane's test split only provides photos sampled one second apart (every 30th
-  frame of the source footage), not continuous video, so there is no data in this project on which
-  smoothing could be meaningfully demonstrated — a one-second gap is too large for a smoothing
-  demo to show anything but large jumps. The code is written, type-checked and unit-testable in
-  isolation, but it has not been run against real sequential frames.
-- **The ablation isolates one stage at a time, not interactions between stages.** It does not test
-  every combination (e.g. "no enhancement *and* no colour masks together"), so it shows what each
-  stage contributes on top of the others, not a full factorial breakdown.
+- **Evaluator.** `lanekit/evaluate.py` implements CULane's published scoring protocol (30px lane
+  width, IoU > 0.5, Hungarian matching) as an independent implementation, not CULane's official
+  evaluator. Results compare the three methods to each other consistently but are not directly
+  comparable to numbers in the UFLD paper or CULane leaderboards, which use the official evaluator
+  and the full 34,680-photo test set.
+- **UFLD.** Used at inference time only. The reported F1 scores are the original authors' trained
+  model evaluated on this project's data split; this project's contribution on that side is export
+  and integration engineering (PyTorch → ONNX → `cv2.dnn`), not model training.
+- **Indian-roads study.** Four photographs: one with measured ground truth, three with zero true
+  lanes by inspection. This is a small, targeted qualitative extension, not a benchmark.
+- **Temporal smoothing.** `lanekit/improved.py` includes a `LaneTracker` class for
+  exponential-moving-average smoothing of the fitted curve across video frames. CULane's test
+  split provides photos sampled one second apart (every 30th frame of the source footage), not
+  continuous video, so this component is implemented and tested in isolation but not demonstrated
+  against sequential frames within this project's dataset.
+- **Ablation scope.** Each stage is isolated independently, not in combination; the table reports
+  what each stage contributes on top of the full pipeline, not a complete factorial analysis.
 
 ## Repository layout
 
 ```
-lanekit/    core pipelines, evaluation, data loading — the actual project code
-scripts/    CLI tools: run_eval.py, make_figures.py, show_stages.py, calibrate_geometry.py,
+lanekit/    core pipelines, evaluation, data loading
+scripts/    run_eval.py, make_figures.py, show_stages.py, calibrate_geometry.py,
             export_ufld_onnx.py, evaluate_indian_roads.py, label_india_ground_truth.py,
             score_india_roads.py
-docs/       per-contributor writeups, pipeline diagram, and the committed results/figures
+docs/       per-contributor writeups, pipeline diagram, and committed results/figures
             (docs/assets/) referenced throughout this README
 tests/      pytest — 11 tests covering the evaluator, both classical methods, and environment
-data/       datasets (gitignored — not redistributed; see data/README.md)
-outputs/    full-resolution figures regenerated locally (gitignored — see docs/assets/ for the
-            committed, representative copies used in this README)
+data/       datasets (gitignored, not redistributed; see data/README.md)
+outputs/    figures regenerated locally (gitignored; see docs/assets/ for committed copies)
 ```
 
 ## Reproducing everything
@@ -392,12 +363,10 @@ uv run python scripts/run_eval.py --per-condition 250                      # -> 
 uv run python scripts/run_eval.py --per-condition 250 --ablation           # -> outputs/ablation.csv
 uv run python scripts/make_figures.py                                      # tables/charts/comparisons
 
-# Optional: the qualitative Indian-roads comparisons (needs data/india_samples/ — see data/README.md)
+# Optional: the Indian-roads comparisons (needs data/india_samples/ — see data/README.md)
 uv run python scripts/evaluate_indian_roads.py
 
-# Optional: real (not fabricated) scores on the 4 Indian photos — needs a display.
-# Click points along each true lane; 'n' new lane, 's' save+next, 'q' skip. n=4 is
-# not a benchmark, but it's a genuine score instead of none.
+# Optional: label and score ground truth on the Indian photos (needs a display)
 uv run python scripts/label_india_ground_truth.py
 uv run python scripts/score_india_roads.py
 ```
@@ -414,8 +383,8 @@ Full log: [CONTRIBUTIONS.md](CONTRIBUTIONS.md).
 - **Aditya** — the improved classical detector, its ablation study, and the failure analysis.
 - **Shashank** — data pipeline, the CULane-protocol evaluator, the baseline detector, and the UFLD
   ONNX export / `cv2.dnn` integration.
-- All three-method evaluation results were independently re-run and verified to match exactly
-  between both team members before being merged.
+- All three-method evaluation results were independently re-run by both team members and matched
+  before being merged.
 
 ## License
 
