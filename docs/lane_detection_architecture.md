@@ -13,7 +13,7 @@ flowchart TD
     C5 --> C6[Length-weighted line fit, left and right]
     C6 --> O[Lane point arrays]
 
-    B -->|Improved, Person A| D[Enhancement, color masks, perspective warp and lane fitting]
+    B -->|Improved, Aditya Pandey| D[Enhancement, color masks, perspective warp and lane fitting]
     D --> O
 
     B -->|Learned UFLD| E[Resize 800 x 288; BGR to RGB; normalize]

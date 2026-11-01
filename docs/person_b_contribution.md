@@ -1,10 +1,10 @@
-# DIP-049 — Shashank's technical contribution
+# DIP-049 — Shashank Patel's technical contribution
 
 ## Scope
 
 This document covers the classical baseline, the shared lane evaluator, the learned UFLD
 inference integration and ONNX export workflow, the qualitative Indian-roads study, result
-reporting, and reproducibility support. The improved classical detector is Aditya's
+reporting, and reproducibility support. The improved classical detector is Aditya Pandey's
 implementation in `lanekit/improved.py` and is treated here as a compared system; it was not
 modified for this contribution.
 

@@ -83,7 +83,7 @@ trapezoid mask → probabilistic Hough transform for line segments → segments 
 slope and combined into one straight line per side, weighted by segment length. Textbook defaults
 throughout, no tuning.
 
-### 2. Improved — hand-tuned classical pipeline (Aditya)
+### 2. Improved — hand-tuned classical pipeline (Aditya Pandey)
 
 `lanekit/improved.py`. Nine stages, each saved to disk for inspection:
 
@@ -111,7 +111,7 @@ throughout, no tuning.
 
 Full stage-by-stage images for every condition: [`docs/assets/stages_*.jpg`](docs/assets/).
 
-### 3. Learned — Ultra-Fast Lane Detection (Shashank)
+### 3. Learned — Ultra-Fast Lane Detection (Shashank Patel)
 
 `lanekit/learned.py`. [UFLD](https://github.com/cfzd/Ultra-Fast-Lane-Detection) (Qin et al., ECCV
 2020), pretrained on CULane by its original authors, used for inference only. It treats
@@ -245,8 +245,8 @@ That assumption holds on clean, well-lit, unobstructed roads and fails in the th
 whenever something else in the scene is brighter than the paint, the road geometry is not a single
 straight stripe, or no paint is present.
 
-Full writeups: [Aditya](docs/person_a_contribution.md) (improved pipeline, ablation, failure
-analysis) and [Shashank](docs/person_b_contribution.md) (data, baseline, evaluator, UFLD
+Full writeups: [Aditya Pandey](docs/person_a_contribution.md) (improved pipeline, ablation, failure
+analysis) and [Shashank Patel](docs/person_b_contribution.md) (data, baseline, evaluator, UFLD
 integration).
 
 ## Qualitative study on Indian roads
@@ -380,8 +380,8 @@ repo to `models/ufld_repo`, then run `scripts/export_ufld_onnx.py`. Once
 
 Full log: [CONTRIBUTIONS.md](CONTRIBUTIONS.md).
 
-- **Aditya** — the improved classical detector, its ablation study, and the failure analysis.
-- **Shashank** — data pipeline, the CULane-protocol evaluator, the baseline detector, and the UFLD
+- **Aditya Pandey** — the improved classical detector, its ablation study, and the failure analysis.
+- **Shashank Patel** — data pipeline, the CULane-protocol evaluator, the baseline detector, and the UFLD
   ONNX export / `cv2.dnn` integration.
 - All three-method evaluation results were independently re-run by both team members and matched
   before being merged.

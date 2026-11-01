@@ -1,4 +1,4 @@
-"""Way 2: the improved classical lane pipeline (Person A).
+"""Way 2: the improved classical lane pipeline (Aditya Pandey).
 
 Stages: CLAHE/gamma enhancement -> white+yellow HLS masks -> morphological
 closing -> road-area mask -> bird's-eye warp -> sliding-window search ->
