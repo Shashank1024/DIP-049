@@ -1,0 +1,13 @@
+scene,method,gt_lanes,pred_lanes,tp,fp,fn,precision,recall,f1
+expressway,baseline,2,2,0,2,2,0.0,0.0,0.0
+expressway,improved,2,1,0,1,2,0.0,0.0,0.0
+expressway,learned_ufld,2,2,0,2,2,0.0,0.0,0.0
+traffic,baseline,0,2,0,2,0,0.0,0.0,0.0
+traffic,improved,0,2,0,2,0,0.0,0.0,0.0
+traffic,learned_ufld,0,0,0,0,0,0.0,0.0,0.0
+urban,baseline,0,2,0,2,0,0.0,0.0,0.0
+urban,improved,0,2,0,2,0,0.0,0.0,0.0
+urban,learned_ufld,0,2,0,2,0,0.0,0.0,0.0
+suburban,baseline,0,2,0,2,0,0.0,0.0,0.0
+suburban,improved,0,2,0,2,0,0.0,0.0,0.0
+suburban,learned_ufld,0,0,0,0,0,0.0,0.0,0.0

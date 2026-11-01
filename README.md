@@ -290,9 +290,21 @@ themselves are not committed to this repository (same reasoning as CULane — se
 
 ### Observations — domain shift is real, and it isn't gentle
 
-No scores are claimed here — four photos is not a benchmark — but the pattern across all four is
-consistent enough to state plainly, because it's the honest finding: **none of the three methods
-transfer cleanly to India, including the pretrained CNN that dominates every CULane condition.**
+Four photos is not a benchmark, so no benchmark claim is made — but one of the four, the
+expressway photo, does have real ground truth: its two dashed lane lines were hand-labelled
+(points read directly off the photo's actual pixel coordinates, not clicked with a mouse, so
+treat this as a good-faith single-photo measurement, not sub-pixel-precise) and scored with the
+same evaluator and the same IoU > 0.5 rule used throughout this report
+([docs/assets/india_results.csv](docs/assets/india_results.csv)). The result: **all three methods
+score F1 = 0.0 on it.** UFLD's best-matching predicted lane overlaps the true lane at IoU = 0.39 —
+visibly close, genuinely in the right place, and still short of the 0.5 bar. The other three
+photos have no visible lane paint anywhere in frame (confirmed by direct inspection, not
+assumed), so their true lane count is zero and any line a method draws on them is, by definition,
+a false positive — which is exactly how CULane itself scores its own no-lane photos.
+
+Even allowing for that strictness, the pattern across all four photos is consistent enough to
+state plainly, because it's the honest finding: **none of the three methods transfer cleanly to
+India, including the pretrained CNN that dominates every CULane condition.**
 
 | Scene | Baseline | Improved | UFLD |
 |---|---|---|---|
@@ -333,9 +345,11 @@ be read:
   original authors' trained model running on our data split, not a model this project trained or
   fine-tuned. The contribution on that side is export/integration engineering (PyTorch → ONNX →
   `cv2.dnn`), not modelling.
-- **Indian road evaluation is strictly qualitative, on four photos, with no ground truth.** All
-  quantitative F1/precision/recall numbers in this README come only from the 1,250-photo CULane
-  test split. The [Indian roads section](#qualitative-study-on-indian-roads) shows what the three
+- **Indian road evaluation is on four photos, one of them hand-labelled, not a benchmark.** The
+  Section 5 results table uses only the 1,250-photo CULane test split. One of the four Indian
+  photos (the expressway) has a real, single-photo ground-truth score (all three methods: F1 =
+  0.0, see above); the other three have zero true lanes by direct visual confirmation. The
+  [Indian roads section](#qualitative-study-on-indian-roads) shows what the three
   methods actually produce on real Indian footage — including UFLD finding zero lanes on two of
   the four photos — but four unlabelled images cannot support a benchmark claim, and none is made.
 - **Temporal smoothing is implemented but not evaluated.** `lanekit/improved.py` includes a

@@ -34,3 +34,10 @@ Exact source footage is not tracked in this repo. If you need to recreate this f
 dashcam-style Indian driving clip works — extract one representative frame per scene with
 `ffmpeg -i <clip> -vf "select=eq(n\,<frame_number)" -frames:v 1 <output>.jpg` and resize to
 1280×720 (the script does this automatically if the input isn't already that size).
+
+A matching `<name>.lines.txt` beside each photo is its ground truth, in CULane's point format
+(see `scripts/label_india_ground_truth.py` to create your own, or `scripts/score_india_roads.py`
+to score against existing ones). The committed set used for this project's reported result: real
+dashed-line coordinates for `frame_expressway.jpg`, read directly off the photo (not mouse-clicked
+— see the README's Indian-roads section for what that means for precision); empty files for the
+three Bengaluru photos, since direct inspection confirmed no visible lane paint in any of them.
